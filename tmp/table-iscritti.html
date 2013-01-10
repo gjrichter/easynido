@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<!--
+  Copyright 2011 Google Inc. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<html>
+  <head>
+	<meta charset="iso-8859-1">	
+
+    <title>EasyNido Iscritti</title>
+
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+
+	<style type="text/css" title="currentStyle">
+		@import "./DataTables-1.9.1/media/css/demo_page.css";
+		@import "./DataTables-1.9.1/media/css/demo_table.css";
+	</style>
+	<script type="text/javascript" language="javascript" src="./DataTables-1.9.1/media/js/jquery.js"></script>
+	<script type="text/javascript" language="javascript" src="./DataTables-1.9.1/media/js/jquery.dataTables.js"></script>
+
+	<script type="text/javascript" src="fusiontable.js"></script>
+
+	<style type="text/css">
+      table {
+        width: 100%;
+      }
+
+      th {
+        width: 300px;
+        text-align: left;
+      }
+      td {
+        width: 300px;
+        text-align: left;
+		background: #f8f8f8;
+      }
+      td.supp {
+		background: #eaf0ea;
+      }
+    </style>
+				
+    <script type="text/javascript">
+		google.load('visualization', '1');
+
+		var oTable = null;
+		var nColCount = 0;
+		var nColSkip = 0;
+
+		function getTable() {
+
+			queryTemplate_1 = "SELECT 'Iscritto' as nome " + 
+						", 'Indirizzo' as indirizzo " +
+						", 'Richiedente/Intestatario' as rich_intest " +
+						", 'TELEFONO_RICH' as tel " +
+						", 'CELLULARE_RICH' as cell " +
+						", 'E_MAIL_RICH' as email " +
+						", 'Adesione' as adesione " +
+			'FROM ';
+
+			queryTemplate_2 = "SELECT 'Iscritto' as nome " + 
+						", 'Indirizzo' as indirizzo " +
+						", 'Richiedente/Intestatario' as rich_intest " +
+						", 'CELLULARE' as tel " +
+						", 'CELLULARE' as cell " +
+						", 'E_MAIL' as email " +
+						", 'Adesione' as adesione " +
+			'FROM ';
+
+			var __FusionTableIdA = {"meraviglie"	:"5231226",
+									"mongolfiera"	:"5231435",
+									"principe"		:"5231136",
+									"primavera"		:"5232223"
+									};
+
+	  var ftLoader = new FTLoader();
+
+		ftLoader.finishedCallback = makeResultTable;
+
+		ftLoader.loadData( queryTemplate_1 + __FusionTableIdA["meraviglie"]  ,"meraviglie");
+		ftLoader.loadData( queryTemplate_1 + __FusionTableIdA["mongolfiera"] ,"mongolfiera");
+		ftLoader.loadData( queryTemplate_1 + __FusionTableIdA["principe"]    ,"principe");
+		ftLoader.loadData( queryTemplate_2 + __FusionTableIdA["primavera"]   ,"primavera");
+		return;
+	}
+
+	  function makeResultTable(loader){
+
+		loader.mergeLoadedTables();
+		drawTable(loader.mergedTable);
+		drawStats(loader.mergedTable);
+
+	  }
+
+      function drawTable(response) {
+
+          var numRows = response.getDataTable().getNumberOfRows();
+          var numCols = response.getDataTable().getNumberOfColumns();
+		  nColCount = numCols;
+          var ftdata = ['<table id="appartamenti" class="display"><thead><tr>'];
+
+          for (var i = 0; i < numCols; i++) {
+            var columnTitle = response.getDataTable().getColumnLabel(i);
+            ftdata.push('<th>' + columnTitle + '</th>');
+          }
+          ftdata.push('</tr></thead><tbody>');
+
+          for (var i = 0; i < numRows; i++) {
+            ftdata.push('<tr>');
+            for(var j = 0; j < numCols; j++) {
+              var rowValue = response.getDataTable().getValue(i, j);
+				if ( rowValue == null ){
+					rowValue = " - ";
+				}
+			  if ( j>=4 ) {
+				ftdata.push('<td class="supp">' + rowValue + '</td>');
+			  }else{
+				ftdata.push('<td>' + rowValue + '</td>');
+			  }
+            }
+            ftdata.push('</tr>');
+          }
+		  if ( 1 ){
+            ftdata.push('</tbody><tfoot>');
+            ftdata.push('<tr>');
+              for (var i = 0; i < numCols; i++) {
+                var columnTitle = response.getDataTable().getColumnLabel(i);
+				ftdata.push('<th>' + '<input type="text" name="search_'+columnTitle+'" value="'+columnTitle+'" class="search_init" /></th>');
+			  }
+            ftdata.push('</tr>');
+            ftdata.push('</tfoot></table>');
+		  }else{
+            ftdata.push('</tbody></table>');
+		  }
+
+          document.getElementById('ft-data').innerHTML = ftdata.join('');
+			/* Add a click handler to the rows - this could be used as a callback */
+			$('#appartamenti tr').click( function() {
+				if ( $(this).hasClass('row_selected') ){
+					$(this).removeClass('row_selected');
+				} else {
+					$(this).addClass('row_selected');
+				}
+			} );
+			
+			var asInitVals = new Array();
+
+			oTable = 
+			$('#appartamenti').dataTable( {
+						"oLanguage": {
+							"sSearch": ""
+						}
+					} );
+
+			$("tfoot input").keyup( function () {
+				/* Filter on the column (the index) of this element */
+				var nSkip = ($("tfoot input").index(this)>4)?nColSkip:0;
+				oTable.fnFilter( this.value, $("tfoot input").index(this) + nSkip );
+			} );
+				
+			/*
+			 * Support functions to provide a little bit of 'user friendlyness' to the textboxes in 
+			 * the footer
+			 */
+			$("tfoot input").each( function (i) {
+				asInitVals[i] = this.value;
+			} );
+			
+			$("tfoot input").focus( function () {
+				if ( this.className == "search_init" )
+				{
+					this.className = "";
+					this.value = "";
+				}
+			} );
+			
+			$("tfoot input").blur( function (i) {
+				if ( this.value == "" )
+				{
+					this.className = "search_init";
+					this.value = asInitVals[$("tfoot input").index(this)];
+				}
+			} );
+
+      // end drawTable()
+      }
+
+      function drawStats(response) {
+
+          var numRows = response.getDataTable().getNumberOfRows();
+          var numCols = response.getDataTable().getNumberOfColumns();
+		  var indexAdesione = 999;
+		  var nAdesione = 0;
+
+          for (var i = 0; i < numCols; i++) {
+            if ( response.getDataTable().getColumnLabel(i) == "adesione" ) {
+				indexAdesione = i;
+			}
+          }
+
+          for (var i = 0; i < numRows; i++) {
+			if ( response.getDataTable().getValue(i, indexAdesione)	== "si"	){
+				nAdesione++;
+			}
+		  }
+			
+		var szStat  = "<br><br><div>Iscritti: "+numRows+" adesioni: "+nAdesione+"</div>";
+		    szStat += "<div>Percentuale: "+Math.round(100/numRows*nAdesione)+"%</div>";
+
+          document.getElementById('ft-stats').innerHTML = szStat;
+
+	  }
+
+
+	  function setSkip(n){
+		nColSkip = n;
+		for ( i=0; i<nColCount; i++ ){
+			oTable.fnSetColumnVis( i,true );
+		}
+		for ( i=4; i<4+nColSkip; i++ ){
+			oTable.fnSetColumnVis( i,false );
+		}
+		$("#appartamenti").css("width","100%");
+	  }
+	  function setDSkip(n){
+		nColSkip = Math.min(Math.max(nColSkip+n,0),nColCount-5);
+		for ( i=4; i<nColCount; i++ ){
+			oTable.fnSetColumnVis( i,true );
+		}
+		for ( i=4; i<4+nColSkip; i++ ){
+			oTable.fnSetColumnVis( i,false );
+		}
+		$("#appartamenti").css("width","100%");
+	  }
+		
+      google.setOnLoadCallback(getTable);
+    </script>
+  </head>
+  <body>
+	<div id="tools" style="position:relative;top:25px;left:592px;width:200px;z-index:1000;">
+		<a style="text-decoration:none;font-size:1.5em;font-weight:bold;" href="javascript:setSkip(0);">|&lArr;&nbsp;&nbsp; </a>
+		<a style="text-decoration:none;font-size:1.5em;font-weight:bold;" href="javascript:setDSkip(-5);">&larr;&nbsp;&nbsp; </a>
+		<a style="text-decoration:none;font-size:1.5em;font-weight:bold;" href="javascript:setDSkip(5);">&rarr;&nbsp;&nbsp;</a>
+		<a style="text-decoration:none;font-size:1.5em;font-weight:bold;" href="javascript:setSkip(21);">&rArr;&nbsp;&nbsp;</a>
+	</div>
+    <div id="ft-data"></div>
+    <div id="ft-stats"></div>
+  </body>
+</html>

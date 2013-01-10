@@ -1,0 +1,1 @@
+call convert -thumbnail x64 -gravity Center -crop 64x64+0+0 -border 3 -bordercolor "#B5D5EA" %1 %2

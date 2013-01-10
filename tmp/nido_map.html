@@ -1,0 +1,209 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+	<meta charset="iso-8859-1">	
+	<title>Easy Nido</title>
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"> 
+
+	<link rel="stylesheet" href="jquery.mobile.structure-1.1.1.min.css" />
+	<link rel="stylesheet" href="jquery.mobile-1.1.1.min.css" />
+	<link rel="stylesheet" href="custom.css" />
+	<link rel="stylesheet" href="css/mobilemap.css" />
+
+
+	<script src="js/jquery-1.7.1.min.js"></script>
+	<script src="js/jquery.mobile-1.1.1.min.js"></script>
+    <script src="scripts/jquery/plugins/jquery.getUrlParam.js"></script>
+
+	<!-- V3 -->
+	<script src="http://maps.google.com/maps/api/js?sensor=false&amp;libraries=panoramio" type="text/javascript"></script>
+	<script src="scripts/map_GoogleV3.js" type="text/javascript"></script>
+	<script src="scripts/tiptools.js" type="text/javascript"></script>
+	<script src="scripts/infobubble.js" type="text/javascript"></script>
+	<!-- -->
+
+	<!-- mapup -->
+	<script src="scripts/map_api.js" type="text/javascript"></script>
+	<script src="scripts/map_up.js" type="text/javascript"></script>
+	<script src="scripts/map_feed.js" type="text/javascript"></script>
+	<!-- user defined content provider -->
+	<script src="mymap_api.js" type="text/javascript"></script>
+	<!-- -->
+
+	<!-- all easy nido scripts -->
+	<script src="js/easynido.js"></script>
+
+
+
+<script type="text/javascript" charset="utf-8"> 
+
+	var defaultLayerDialog = "./layer.html";
+	var defaultParamFile = "./param.js";
+
+	$(document).ready(function() {
+
+		var paramFile = $(document).getUrlParam('param');
+		$.get(paramFile?paramFile:defaultParamFile,
+			function(data){
+				if ( MapParam.defaultmap ){
+					ixmaps.jsonapi.reset();
+				}
+			
+			});
+		  
+		// create map !!!
+		// ---------------------------------------------------------------------------------------
+		var mapUp = new ixmaps.jsonapi.MapUp("map","itemlist","legend",null);
+		ixmaps.jsonapi.setView("map");
+
+		__fAccessToData = $(document).getUrlParam('accesstodata');
+
+		__addEvent(window, "resize", function() { ixmaps.jsonapi.onWindowResize(null,false); } );
+
+	});
+
+
+	// add layer defined by my own json
+	// ----------------------------------------------------------------
+	function addLayer(szLayer,szFlag){
+		if ( szFlag && szFlag.match(/zoomto/) ){
+			ixmaps.jsonapi.addDataAndZoomTo(szLayer);
+		}else{
+			ixmaps.jsonapi.addData(szLayer);
+		}
+		parent.window.$("#dialog").dialog( "close" );
+	}
+
+	// add layer defined by feed ( rss, georss, kml, geojson )
+	// ----------------------------------------------------------------
+	addFeedLayer = function(szLayer,szName,szType,szFlag,szTitle){
+		ixmaps.feed.addFeed(szLayer,{"name":szName,"type":szType,"flag":szFlag,'title':szTitle});
+	};
+
+	var __addEvent = function(elem, type, eventHandle) {
+		if (elem == null || elem == undefined){
+			return;
+		}
+		if ( elem.addEventListener ) {
+			elem.addEventListener( type, eventHandle, false );
+		} else if ( elem.attachEvent ) {
+			elem.attachEvent( "on" + type, eventHandle );
+		}
+	};
+
+</script>
+
+</head> 
+<body > 
+
+	<div data-role="page" id="nido_map" style="background:none;max-width:100%;" >
+
+		<div id="hdr" data-role="header" data-position="fixed" data-id="myHeader" data-theme="f" style="box-shadow: 0px 1px 4px;z-index:9999;border-bottom: #bbb solid 1px;	border-radius:0;">
+			<!-- logo, back() -->
+			<div  style="position:relative;left:7px;top:3px;height:42px;">
+				<a href="javascript:javascript:history.go(-1);">
+					<img style="align:center;" src="resources/images/easy_nido/logo-icon.png">
+				</a>
+			</div>
+			<!-- filter ... -->
+			<form id="IndicatorFilterForm" style="position:absolute;top:-5px;left:80px;" action="javascript:ixmaps.jsonapi.search();" name="IndicatorFilterForm">
+				<input id="query" type="text" value=" filtro ..." style="font-size:14px;width:120px;height:34px;border:none;" title="query map items" onkeyup="javascript:ixmaps.jsonapi.search();" onblur="if(this.value=='') this.value=' filtro ...';" onfocus="if(this.value==' filtro ...') this.value='';"/>	
+			</form>
+			<!-- buttons -->
+			<div  style="position:absolute;right:5px;top:4px;">
+				<a href="javascript:ixmaps.jsonapi.setView('next');" class="ui-btn ui-btn-up-c" >
+					<img id="view-select-icon" style="align:center;" src="resources/icons/cards.png" height="28px;">
+				</a>
+				<!--
+				<a href="javascript:ixmaps.jsonapi.setView('map');ixmaps.jsonapi.reset()" class="ui-btn ui-btn-up-c" >
+					<img style="align:center;" src="resources/images/reset.png" height="28px;">
+				</a>
+				-->
+				<a href="javascript:__easynido_selectLayerDialog();" class="ui-btn ui-btn-up-c">
+					<img style="align:center;" src="resources/icons/menu.png" height="28px;">
+				</a>
+			</div>
+
+		</div><!-- /header -->
+
+		<!-- content = map -->
+		<div id="content" data-role="content" style="padding:0;margin:0;display:block;overflow:hidden;" >
+		
+			<!--========================================================================= 
+				map
+			<!--========================================================================= -->
+			<div id="map"  >
+			</div>
+
+			<!--========================================================================= 
+				sidebar
+			<!--========================================================================= -->
+
+			<div id="sidebar" >
+				<div id="itemlist" >
+				</div>
+				<!-- legend --> 
+			</div>
+
+
+
+			<div id="layer-dialog" style="position:absolute;right:0px;top:0px;display:none;background:#f8f8f8;height:inherit;">
+
+					<ul class="menu" style="" >
+						<li class="menu" style="border:0;">
+						<a href="javascript:ixmaps.jsonapi.setMapType('road');ixmaps.jsonapi.setView('map');ixmaps.jsonapi.reset();__easynido_selectLayerDialog('hide');" >
+								<img style="float:right;margin-top:-3px;margin-right:2px;" src="resources/images/reset.png" height="22px;">
+							</a></li>
+						<a href="javascript:__dialog=true;ixmaps.jsonapi.setMapType('road');__easynido_selectLayerDialog('hide');">
+							<li class="menu">
+							Road Map</li></a>      
+						<a href="javascript:__dialog=true;ixmaps.jsonapi.setMapType('satellite');__easynido_selectLayerDialog('hide');">
+							<li class="menu">
+							Satellite</li></a>       
+						<a href="javascript:__dialog=true;ixmaps.jsonapi.setMapType('terrain');__easynido_selectLayerDialog('hide');">
+							<li class="menu">
+							Terrain</li></a> 
+						<a href="javascript:ixmaps.jsonapi.loadServiceLayer('traffic');__easynido_selectLayerDialog('hide');">
+							<li class="menu">
+							Traffico</li></a>   
+						<a href="javascript:addFeedLayer('http://pipes.yahoo.com/pipes/pipe.run?_id=e5a705c0753739f7beaa4bf15287d4a4&_render=json','Google_Maps_My_Map_KML','json');__easynido_selectLayerDialog('hide');" >
+							<li class="menu">
+							Google My Maps<br>Hotel a SBT<span style="font-size:8px;"></span></li></a>
+						<a href="javascript:addLayer('Scuole','zoomto');__easynido_selectLayerDialog('hide');" >
+							<li class="menu">
+							Scuole</li></a>
+
+						<a href="javascript:addLayer('uso_suolo_verde');__easynido_selectLayerDialog('hide');" >
+						<li class="menu">
+						Zone verdi</li></a>
+						<a href="javascript:addLayer('Start');__easynido_selectLayerDialog('hide');" >
+						<li class="menu">
+						Linee Start</li></a>
+
+
+
+					</ul>
+						
+
+					<!--
+					<ul data-role="listview" data-inset="true" >
+						<li><a href="javascript:addFeedLayer('http://pipes.yahoo.com/pipes/pipe.run?_id=e5a705c0753739f7beaa4bf15287d4a4&_render=json','Google_Maps_My_Map_KML','json');__easynido_selectLayerDialog('hide');" >
+						Google My Maps<br>Hotel a SBT<span style="font-size:8px;"></span></a></li>
+						<li><a href="javascript:addLayer('Scuole','zoomto');__easynido_selectLayerDialog('hide');" >
+						Scuole</a></li>
+					</ul>
+
+					<ul data-role="listview" data-inset="true" >
+						<li><a href="javascript:__easynido_selectLayerDialog('hide');">
+						Cancel</a></li>    
+					</ul>
+					-->
+			</div>
+
+		</div><!-- /content -->
+
+	</div><!-- /page -->
+
+</body>
+</html>

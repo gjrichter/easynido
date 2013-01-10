@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+  <head>
+	<meta charset="iso-8859-1">	
+
+    <title>EasyNido Statistics</title>
+
+	<script src="../js/jquery-1.7.1.min.js"></script>
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+	<script type="text/javascript" src="fusiontable.js"></script>
+
+	<script src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
+
+	<style type="text/css">
+		table {
+			width: 100%;
+		}
+
+		th {
+			width: 300px;
+			text-align: left;
+		}
+		td {
+			width: 300px;
+			text-align: left;
+			background: #f8f8f8;
+		}
+		td.supp {
+			background: #eaf0ea;
+      }
+    </style>
+				
+ <script type="text/javascript">
+	google.load('visualization', '1');
+
+	var oTable = null;
+	var nColCount = 0;
+	var nColSkip = 0;
+
+	function getTable() {
+
+		// Construct query
+		queryTemplate_1 = "SELECT 'Iscritto' as nome " + 
+					", 'Indirizzo' as indirizzo " +
+					", 'Richiedente/Intestatario' as rich_intest " +
+					", 'TELEFONO_RICH' as tel " +
+					", 'CELLULARE_RICH' as cell " +
+					", 'E_MAIL_RICH' as email " +
+					", 'Position' as position " +
+					", 'Adesione' as adesione " +
+		'FROM ';
+
+		queryTemplate_2 = "SELECT 'Iscritto' as nome " + 
+					", 'Indirizzo' as indirizzo " +
+					", 'Richiedente/Intestatario' as rich_intest " +
+					", 'CELLULARE' as tel " +
+					", 'CELLULARE' as cell " +
+					", 'E_MAIL' as email " +
+					", 'Position' as position " +
+					", 'Adesione' as adesione " +
+		'FROM ';
+
+		var __FusionTableIdA = {"meraviglie"	:"5231226",
+								"mongolfiera"	:"5231435",
+								"principe"		:"5231136",
+								"primavera"		:"5232223"
+								};
+
+
+		var ftLoader = new FTLoader();
+
+		ftLoader.finishedCallback = makeResultTable;
+
+		ftLoader.loadData( queryTemplate_1 + __FusionTableIdA["meraviglie"]  ,"meraviglie");
+		ftLoader.loadData( queryTemplate_1 + __FusionTableIdA["mongolfiera"] ,"mongolfiera");
+		ftLoader.loadData( queryTemplate_1 + __FusionTableIdA["principe"]    ,"principe");
+		ftLoader.loadData( queryTemplate_2 + __FusionTableIdA["primavera"]   ,"primavera");
+	}
+
+	function makeResultTable(loader){
+
+		loader.mergeLoadedTables();
+		drawStats(loader.mergedTable);
+		drawDistances(loader.mergedTable);
+	}
+
+    function drawStats(response) {
+
+		var numRows = response.getDataTable().getNumberOfRows();
+		var numCols = response.getDataTable().getNumberOfColumns();
+		var indexAdesione = 999;
+		var nAdesione = 0;
+
+		for (var i = 0; i < numCols; i++) {
+			if ( response.getDataTable().getColumnLabel(i) == "adesione" ) {
+				indexAdesione = i;
+			}
+		}
+
+		for (var i = 0; i < numRows; i++) {
+			if ( response.getDataTable().getValue(i, indexAdesione)	== "si"	){
+				nAdesione++;
+			}
+		}
+
+		var szStat  = "<div>Iscritti: "+numRows+"<br>adesioni: "+nAdesione+"</div>";
+		szStat += "<div>Percentuale: "+Math.round(100/numRows*nAdesione)+"%</div>";
+
+		document.getElementById('ft-stats').innerHTML = szStat;
+
+	}
+
+    function drawDistances(response) {
+
+		$.getJSON("../data/Nidi.js", function(json){
+			doDrawDistances(response,json);
+		});
+	}
+
+
+	var __iscritti = null;
+	var __nidi = null;
+
+    function doDrawDistances(iscritti,nidi) {
+
+		__iscritti = iscritti;
+		__nidi = nidi;
+
+		getDistancesOfNido(iscritti,nidi,"meraviglie");	
+		getDistancesOfNido(iscritti,nidi,"principe");	
+		getDistancesOfNido(iscritti,nidi,"mongolfiera");	
+		getDistancesOfNido(iscritti,nidi,"primavera");	
+		}
+
+    function doDrawDistancesAdesioni() {
+
+		getDistancesOfNido(__iscritti,__nidi,"meraviglie",true);	
+		getDistancesOfNido(__iscritti,__nidi,"principe",true);	
+		getDistancesOfNido(__iscritti,__nidi,"mongolfiera",true);	
+		getDistancesOfNido(__iscritti,__nidi,"primavera",true);	
+		}
+
+	var __nDistancesSum = 0;
+	var __szDistances = "";
+
+    function getDistancesOfNido(iscritti,nidi,szNido,fAdesione) {
+
+		var numRows = iscritti.getDataTable().getNumberOfRows();
+		var numCols = iscritti.getDataTable().getNumberOfColumns();
+		var indexPosition = 999;
+		var adesionePosition = 999;
+		var nAdesione = 0;
+
+		for (var i = 0; i < numCols; i++) {
+			if ( iscritti.getDataTable().getColumnLabel(i) == "position" ) {
+				indexPosition = i;
+			}
+			if ( iscritti.getDataTable().getColumnLabel(i) == "adesione" ) {
+				adesionePosition = i;
+			}
+		}
+		
+		var origins = new Array();
+		var destinations = new Array();
+
+		var nidi = nidi.layers[0].features;
+		for ( i=0; i<nidi.length; i++ ){
+			if ( nidi[i].properties && nidi[i].properties.name && eval("nidi[i].properties.name.match(/"+szNido+"/i)") ){
+				var nidoPosition = nidi[i].geometry.coordinates[1] + "," + nidi[i].geometry.coordinates[0];
+			}
+		}
+		
+		for (var i = 0; i < numRows; i++) {
+			if ( iscritti.getDataTable().getValue(i, 0) == szNido ){
+				if ( !fAdesione || (iscritti.getDataTable().getValue(i, adesionePosition) == "si") ){
+					var position = iscritti.getDataTable().getValue(i, indexPosition);
+					origins.push(position);
+					destinations.push(nidoPosition);
+				}
+			}
+		}
+		
+		var szOrigins = origins.join("|");
+		var szDestinations = destinations.join("|");
+
+		var originsA = new Array();
+		var destinationsA = new Array();
+
+		destinationsA.push(eval("new google.maps.LatLng("+destinations[0]+")"));
+		for ( i=0; i<origins.length; i+=20 ){
+			originsA.length = 0;
+			for ( k=0; k<Math.min(20,origins.length-i); k++ ){
+				originsA.push(eval("new google.maps.LatLng("+origins[i+k]+")"));
+			}
+			getDistances(originsA,destinationsA,((origins.length-i)<=20)?szNido:null);
+		}
+	}
+	function getDistances(originsA,destinationsA,fLast){
+
+		var service = new google.maps.DistanceMatrixService();
+		service.getDistanceMatrix(
+		  {
+			origins: originsA,
+			destinations: destinationsA,
+			travelMode: google.maps.TravelMode.DRIVING,
+			unitSystem: google.maps.UnitSystem.METRIC,
+			avoidHighways: false,
+			avoidTolls: false
+		  }, function(response, status) {
+				if (status != google.maps.DistanceMatrixStatus.OK) {
+				  alert('Error was: ' + status);
+				} else {
+				  var origins = response.originAddresses;
+				  var destinations = response.destinationAddresses;
+				  for (var i = 0; i < origins.length; i++) {
+					var results = response.rows[i].elements;
+					for (var j = 0; j < results.length; j++) {
+						__nDistancesSum += results[j].distance.value;	
+					}
+				  }
+				}
+				if ( fLast ){
+					collectDistances(__nDistancesSum,fLast);
+					__nDistancesSum = 0;
+				}
+		});
+	}
+	
+      function callback(response, status) {
+        if (status != google.maps.DistanceMatrixStatus.OK) {
+          alert('Error was: ' + status);
+        } else {
+          var origins = response.originAddresses;
+          var destinations = response.destinationAddresses;
+          for (var i = 0; i < origins.length; i++) {
+            var results = response.rows[i].elements;
+            for (var j = 0; j < results.length; j++) {
+				__nDistancesSum += results[j].distance.value;	
+            }
+          }
+        }
+      }
+
+	var nCount = 0;
+	function collectDistances(nDistanceInMeter,szNido){
+		var listItem = document.createElement("div");
+		var szContent  = "<span>"+szNido+": "+nDistanceInMeter/1000+" km";
+		    szContent += " (" + Math.round(nDistanceInMeter/1000*150/10)/100 + " kg CO2)"+"</span>";
+
+		$(szContent).appendTo(listItem); 
+
+		if ( szNido == "primavera"){
+			if ( nCount++ == 0 ){
+				var szContent = "<p>- solo adesioni<p>";
+				$(szContent).appendTo(listItem);
+				doDrawDistancesAdesioni();
+			}else{
+				var szContent = "<p><span style='font-size:0.8em;'>*) calcolo CO2 effetuato alla base di una emissione di 150 g CO2/km. Equivale alla media delle macchine nuove comprate in Italia l'anno 2007 (Eurostat)<p><span>";
+				$(szContent).appendTo(listItem);
+			}
+		}
+
+		$("#outputDiv")[0].appendChild(listItem);
+	}
+
+
+	google.setOnLoadCallback(getTable);
+
+  </script>
+
+
+  </head>
+  <body>
+	<h1>Easy Nido</h1>
+	<div><h4>Istritti ed adesioni 'car pooling':</h4>
+		<div id="ft-stats"></div>
+	</div>
+	<div><h4>Somma delle Distanze</h4>
+		<div id="outputDiv"></div>
+	</div>
+  </body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html> 
+<html>
+	<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+	<title>EasyNido map layer dialog</title> 
+
+</head> 
+<body> 
+
+	<ul id="layerlist" class="menu" style="min-width:200px;" >
+
+		<li class="menu" style="border:0;margin-bottom:20px;">
+			<a href="javascript:ixmaps.jsapi.setMapType('road');ixmaps.jsapi.setView('map');ixmaps.jsapi.reset();" >
+				<img style="float:right;padding:5px;background-color:white" src="resources/icons/01-refresh.png" height="24px;">
+			</a></li>
+
+		<a href="javascript:__dialog=true;ixmaps.jsapi.setMapType('road');__easynido_selectLayerDialog('hide');">
+			<li class="menu">
+			Road Map</li></a>      
+		<a href="javascript:__dialog=true;ixmaps.jsapi.setMapType('satellite');__easynido_selectLayerDialog('hide');">
+			<li class="menu">
+			Satellite</li></a>       
+		<a href="javascript:__dialog=true;ixmaps.jsapi.setMapType('terrain');__easynido_selectLayerDialog('hide');">
+			<li class="menu">
+			Terrain</li></a> 
+
+		<a href="javascript:ixmaps.jsapi.loadServiceLayer('traffic');__easynido_selectLayerDialog('hide');">
+			<li class="menu">
+			Traffico</li></a> 
+			
+		<a href="javascript:addLayer('Parcheggi_rosa','');__easynido_selectLayerDialog('hide');" >
+			<li class="menu">
+			Parcheggi rosa</li></a>
+
+		<a href="javascript:addLayer('Scuole','zoomto');__easynido_selectLayerDialog('hide');" >
+			<li class="menu">
+			Scuole</li></a>
+
+		<li class="menu">&nbsp;</li>
+		
+		<a href="javascript:__easynido_selectFeedDialog('show');__easynido_selectLayerDialog('hide');" >
+			<li class="menu" >
+			altro ...<span style="position:absolute;right:20px;" class="ui-icon ui-icon-arrow-r ui-icon-shadow">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></li></a>
+		<li class="menu">&nbsp;</li>
+		<a href="javascript:__easynido_selectHelpDialog('show');__easynido_selectLayerDialog('hide');" >
+			<li class="menu" >
+			guida</li></a>
+
+	</ul>
+						
+
+
+
+</body>
+</html>

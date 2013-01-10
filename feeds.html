@@ -1,0 +1,557 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=iso-8859-1" />
+	<title>San Benedetto del Tronto - Layer</title>
+
+	<!-- ui -->
+	<link  href = "scripts/jquery/ui/css/ixmaps/jquery-ui-1.8.16.custom.css" rel="stylesheet" type="text/css"/>
+	<script src = "scripts/jquery/jquery-1.4.1.min.js"></script>
+	<script src = "scripts/jquery/ui/js/jquery-ui-1.8.16.custom.min.js"></script>
+
+	<style type="text/css" media="screen"> 
+	body {
+		font-family: verdana;
+	}
+	h1, h2, h3, h4 {
+		color: #888888;
+	}
+	h3 {
+		margin-left:0px;
+	}
+	p {
+		color: #888888;
+	}
+	a {
+		text-decoration:none!important;
+		font-size:1em;
+		color: #6B81AD;
+		margin-right: 5px;
+	}
+	a:hover {
+		text-decoration:underline!important;
+		font-size:1em;
+		color: #0000dd;
+		margin-right: 5px;
+	}
+	ul {
+		list-style:square;
+		padding-left:20px;
+		margin-top:-10px;
+	}
+	li {
+		padding-bottom:6px;
+		padding-top:6px;
+		margin-right:15px;
+		border-bottom:dotted #dddddd 1px;
+	}
+	img {
+		height: 32px;
+		vertical-align:-4px;
+		margin-right: 5px;
+	}
+
+	.description{
+		font-size:11px;
+		color:#444444;
+		}
+	</style>
+	<script type="text/javascript">
+
+		var ixmaps = null;
+
+		/* ------------------------------------------------------------------ * 
+			Init functions
+		 * ------------------------------------------------------------------ */
+
+		if ( parent ){
+			ixmaps = parent.window.ixmaps;
+		}else
+		if ( window.opener ){
+			ixmaps = window.opener.ixmaps;
+		}
+
+		// add layer defined by my own json
+		// ----------------------------------------------------------------
+		function addLayer(szLayer,szFlag){
+			if ( szFlag && szFlag.match(/zoomto/) ){
+				ixmaps.jsapi.addDataAndZoomTo(szLayer);
+			}else{
+				ixmaps.jsapi.addData(szLayer);
+			}
+			parent.window.$("#dialog").dialog( "close" );
+		}
+
+		// add layer defined by feed ( rss, georss, kml, geojson )
+		// ----------------------------------------------------------------
+		function addFeedLayer(szLayer,szName,szType,szFlag,szTitle){
+			ixmaps.feed.addFeed(szLayer,{"name":szName,"type":szType,"flag":szFlag,'title':szTitle});
+			parent.window.$("#dialog").dialog( "close" );
+		}
+
+		// use yahoo YQL webservice as proxy to get around origin problems
+		// ----------------------------------------------------------------
+		function addFeedLayer_YQL(szLayer,szName,szType,szFlag,szTitle){
+			var szUrl  = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20xml%20where%20url%3D";
+				szUrl += "'"+encodeURIComponent(szLayer)+"'";
+				szUrl += szName.match(/GeoRSS/)?"&format=rss&diagnostics=true":"&format=json&diagnostics=true";
+			ixmaps.feed.addFeed(szUrl,{"name":szName,"type":szType,"flag":szFlag,'title':szTitle});
+			parent.window.$("#dialog").dialog( "close" );
+		}
+
+		// add feed via form
+		// feedtype defines the processing to apply
+		// ----------------------------------------------------------------
+		function addLayerFeedInput(){
+			return addLayerFeedAutoTypeDetection();
+
+			var feedForm  = window.document.getElementById("AddFeedForm");
+			var szFeedType = "kml";
+			if (feedForm && feedForm.feedtype){
+				for ( var i=0; i<feedForm.feedtype.length; i++ ){
+					if ( feedForm.feedtype[i].checked ){
+						szFeedType = feedForm.feedtype[i].value;
+					}
+				}
+			}
+			switch(szFeedType){
+				case "kml":
+					var szUrl  = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20xml%20where%20url%3D";
+						szUrl += "'"+encodeURIComponent(feedForm.query.value)+"'";
+						szUrl += "&format=json&diagnostics=true";
+					ixmaps.feed.addFeed(szUrl,{"name":'Google_Maps_My_Map_KML_YQL',"type":'json',"flag":''});
+					break;
+				case "georss":
+					var szUrl  = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20xml%20where%20url%3D";
+						szUrl += "'"+encodeURIComponent(feedForm.query.value)+"'";
+						szUrl += "&format=rss&diagnostics=true";
+					ixmaps.feed.addFeed(szUrl,{"name":'GeoRSS',"type":'xml',"flag":''});
+					break;
+				case "xxxgeorss":
+					var szUrl  = feedForm.query.value;
+					ixmaps.feed.addFeed(szUrl,{"name":'GeoRSS',"type":'xml',"flag":''});
+					break;
+				case "rss-geonames":
+					var szUrl  = "http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&country=it&feedLanguage=it&feedUrl=";
+						szUrl += encodeURIComponent(feedForm.query.value);
+					ixmaps.feed.addFeed(szUrl,{"name":'GeoRSS',"type":'xml',"flag":''});
+					break;
+				case "rss-metacarta":
+					var szUrl  = "http://labs.metacarta.com/rss-geotagger/tag/?url=";
+						szUrl += encodeURIComponent(feedForm.query.value);
+					addFeedLayer_YQL(szUrl,'GeoRSS','xml');
+					break;
+				case "geojson":
+					var szUrl  = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20json%20where%20url%3D";
+						szUrl += "'"+encodeURIComponent(feedForm.query.value)+"'";
+						szUrl += "&format=json&diagnostics=true";
+					ixmaps.feed.addFeed(szUrl,{"name":'GeoJson',"type":'json',"flag":''});
+					break;
+				case "geojsonR":
+					// !!! GeoJsonR is with wrong lat/lon coordinates (for berlin feeds)
+					var szUrl  = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20json%20where%20url%3D";
+						szUrl += "'"+encodeURIComponent(feedForm.query.value)+"'";
+						szUrl += "&format=json&diagnostics=true";
+					ixmaps.feed.addFeed(szUrl,{"name":'GeoJsonR',"type":'json',"flag":''});
+					break;
+				}
+			parent.window.$("#dialog").dialog( "close" );
+			}
+
+		// add feed try and error
+		// try different feedtypes until success
+		// ----------------------------------------------------------------
+
+		var __szFeedTypeA	= ["kml","rss-geonames","geojson","geojsonR"];
+		var __nFeedType		= null;
+	
+		function addLayerFeedAutoTypeDetection(next){
+			
+			// next == null   
+			// --> start try feedtypes from list
+			// else try next feed type if exists
+			//
+			if ( !next ){
+				__nFeedType = 0;
+			}else{
+				if ( ++__nFeedType >= __szFeedTypeA.length ){
+					return;
+				}
+			}
+
+			parent.window.$("#dialog").dialog( "close" );
+			
+			var feedForm  = window.document.getElementById("AddFeedForm");
+
+			switch(__szFeedTypeA[__nFeedType]){
+				case "kml":
+					var szUrl  = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20xml%20where%20url%3D";
+						szUrl += "'"+encodeURIComponent(feedForm.query.value)+"'";
+						szUrl += "&format=json&diagnostics=true";
+					ixmaps.feed.addFeed(szUrl,{"name":'Google_Maps_My_Map_KML_YQL',"type":'json',"flag":''},addLayerFeedAutoTypeDetectionResult);
+					break;
+				case "georss":
+					var szUrl  = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20xml%20where%20url%3D";
+						szUrl += "'"+encodeURIComponent(feedForm.query.value)+"'";
+						szUrl += "&format=rss&diagnostics=true";
+					ixmaps.feed.addFeed(szUrl,{"name":'GeoRSS',"type":'xml',"flag":''},addLayerFeedAutoTypeDetectionResult);
+					break;
+				case "xxxgeorss":
+					var szUrl  = feedForm.query.value;
+					ixmaps.feed.addFeed(szUrl,{"name":'GeoRSS',"type":'xml',"flag":''},addLayerFeedAutoTypeDetectionResult);
+					break;
+				case "rss-geonames":
+					var szUrl  = "http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&country=it&feedLanguage=it&feedUrl=";
+						szUrl += encodeURIComponent(feedForm.query.value);
+					ixmaps.feed.addFeed(szUrl,{"name":'GeoRSS',"type":'xml',"flag":''},addLayerFeedAutoTypeDetectionResult);
+					break;
+				case "rss-metacarta":
+					var szUrl  = "http://labs.metacarta.com/rss-geotagger/tag/?url=";
+						szUrl += encodeURIComponent(feedForm.query.value);
+					addFeedLayer_YQL(szUrl,'GeoRSS','xml');
+					break;
+				case "geojson":
+					var szUrl  = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20json%20where%20url%3D";
+						szUrl += "'"+encodeURIComponent(feedForm.query.value)+"'";
+						szUrl += "&format=json&diagnostics=true";
+					ixmaps.feed.addFeed(szUrl,{"name":'GeoJson',"type":'json',"flag":''},addLayerFeedAutoTypeDetectionResult);
+					break;
+				case "geojsonR":
+					// !!! GeoJsonR is with wrong lat/lon coordinates (for berlin feeds)
+					var szUrl  = "http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20json%20where%20url%3D";
+						szUrl += "'"+encodeURIComponent(feedForm.query.value)+"'";
+						szUrl += "&format=json&diagnostics=true";
+					ixmaps.feed.addFeed(szUrl,{"name":'GeoJsonR',"type":'json',"flag":''},addLayerFeedAutoTypeDetectionResult);
+					break;
+				}		
+
+			}
+		function addLayerFeedAutoTypeDetectionResult(result){
+			if ( !result ){
+				addLayerFeedAutoTypeDetection(1);
+			}
+		}
+
+	$(document).ready(function() {
+      
+		$( "#feedtype_kml" ).button();	
+		$( "#feedtype_rss" ).button();	
+		$( "#feedtype_georss" ).button();	
+		$( "#feedtype_geojson" ).button();	
+		$( "#feedtype_select" ).buttonset();
+
+		$( "#query_search" ).button();	
+
+		});
+
+	</script>
+</head>
+<body style="overflow:auto" >
+	<!-- contenuto -->
+	<div id="content">
+
+			<div id="form" style="margin-bottom:25px;">
+			<form id="AddFeedForm" action="javascript:addLayerFeedInput();" name="AddFeedForm">
+			  <table width="100%" cellspacing="1" cellpadding="1" summary="simple search" >
+				<tr>
+				  <td class="descrgrey" valign="bottom" >
+					<span style="font-size:12px;color:#444">load feed by URL</span>
+					<span id="feedtype_select" style="font-size:11px;font-weight:normal;">
+					<input type="radio" id="feedtype_kml" name="feedtype" checked value="kml">
+					<label for="feedtype_kml" title="zoom with rect" >kml/kmz</label> 
+					<input type="radio" id="feedtype_georss" name="feedtype" value="georss">
+					<label for="feedtype_georss" title="zoom with rect" >GeoRSS</label>
+					<input type="radio" id="feedtype_geojson" name="feedtype" value="geojsonR">
+					<label for="feedtype_geojson" title="zoom with rect" >GeoJson</label>
+					<input type="radio" id="feedtype_rss_1" name="feedtype" value="rss-geonames">
+					<label for="feedtype_rss_1" title="zoom with rect" >RSS:geonames</label>  
+					</span>
+				  </td></tr>
+				  <tr><td>
+					<input class="ifield" id="query" type="text" size="65" style="border:solid 1px #ddd" >
+					<input class="ifield" id="query_search" type="button" value="go" style="font-size:12px;font-weight:normal;vertical-align:1px;margin-left:-9px;" onclick="javascript:addLayerFeedInput();">
+				  </td>
+				</tr>
+			  </table>
+			</form>
+			</div>
+			<div id="feedlist">
+				<p>lodable feed layer ... </p> 
+				<h3 style="margin-top:10px;margin-bottom:2px">Itinerari di San Benedetto del Tronto</h3> 
+				<p> 
+					<ul><li>
+					<a href="javascript:addLayer('ItinerarioArteStoria','zoomto',null,'../../layer/geojson/p/data/gz/ItinerarioArteStoria.js');" >Arte e Storia <span style="font-size:8px;">(47 kb)</span></a></br>
+					<span class="description"></span>
+					</li><li>
+					<a href="javascript:addLayer('ItinerarioGiardini','zoomto',null,'../../layer/geojson/p/data/gz/ItinerarioGiardini.js');" >Giardini naturalistici<span style="font-size:8px;">(48 kb)</span></a></br>
+					<span class="description"></span>
+					</li><li>
+					<a href="javascript:addLayer('ItinerarioPorto','zoomto',null,'../../layer/geojson/p/data/gz/ItinerarioPorto.js');" >Luoghi di diporto <span style="font-size:8px;">(45 kb)</span></a>
+					<span class="description"></span>
+					</li><li>
+					<a href="javascript:addLayer('Cultura','zoomto',null,'../../layer/geojson/p/data/gz/Cultura.js');" >Cultura <span style="font-size:8px;">(45 kb)</span></a>
+					<span class="description"></span>
+					</li><li>
+					<a href="javascript:addLayer('Scuole','zoomto',null,'../../layer/geojson/p/data/gz/Scuole.js');" >Scuole <span style="font-size:8px;">(45 kb)</span></a>
+					<span class="description"></span>
+					</li><li>
+					<a href="javascript:addLayer('Servizi','zoomto',null,'../../layer/geojson/p/data/gz/Servizi.js');" >Servizi <span style="font-size:8px;">(45 kb)</span></a>
+					<span class="description"></span>
+					</li></ul>
+				</p>
+				<h3 style="margin-top:10px;margin-bottom:2px">Cartografia di San Benedetto del Tronto</h3> 
+				<p> 
+					<ul><li>
+					<a href="javascript:addLayer('uso_suolo','zoomto',null,'http://maps.ixmaps.com/layer/geojson/p/data/gz/uso_suolo.js.gz');" >Uso Suolo <span style="font-size:8px;">(141 kb)</span></a></br>
+					<span class="description">Uso del suolo del comune di San Benedetto del Tronto, diviso in varie sublayer</span>
+					</li><li>
+					<a href="javascript:addLayer('uso_suolo_verde','zoomto',null,'../../layer/geojson/p/data/gz/uso_suolo_verde.js');" >Zone verdi <span style="font-size:8px;">(54 kb)</span></a></br>
+					<span class="description">Uso del suolo del comune di San Benedetto del Tronto, solo zone verdi</span>
+					</li><li>
+					<a href="javascript:addLayer('orografia','zoomto',null,'../../layer/geojson/p/data/gz/orografia.js');" >Curve di livello <span style="font-size:8px;">(2.138 mb) !</span></a>
+					</li><li>
+					<a href="javascript:addLayer('quartieri','zoomto',null,'../../layer/geojson/p/data/gz/quartieri.js');" >Quartieri <span style="font-size:8px;">(11 kb)</span></a>
+					</li><li> 
+					<a href="javascript:addLayer('sezioni','zoomto',null,'../../layer/geojson/p/data/gz/sezioni.js');" >Sezioni <span style="font-size:8px;">(204 kb)</span></a></br>
+					<span class="description">Sezioni di censimento</span>
+					</li><li>
+					<a href="javascript:addLayer('edificidepoca','zoomto',null,'../../layer/geojson/p/data/gz/edificidepoca.js');" >Edifici d&#39;epoca <span style="font-size:8px;">(1.802 mb) !</span></a></br> 
+					<span class="description">Edifici di San Benedetto del Tronto diviso e colorati per epoca di costruzione </span>
+					</li></ul>
+				</p>
+				<h3 style="margin-top:10px;margin-bottom:2px">P.A.I. Bacino Tronto</h3> 
+				<p> 
+					<ul><li>
+					<a href="javascript:addLayer('franeesondazioni','zoomto',null,'../../layer/geojson/p/data/gz/franeesondazioni.js');" >
+					<img src="./resources/images/cartografia.png" />Frane &amp; Esondazioni <span style="font-size:8px;">(102 kb)</span></a>
+					</li></ul>
+				</p>
+				<h3 style="margin-top:10px;margin-bottom:2px">PRG Cupra</h3> 
+				<p> 
+					<ul><li>
+					<a href="javascript:addLayer('Cupra_PRG','zoomto',null,'../../layer/geojson/p/data/gz/Cupra_PRG.js');" >
+					<img src="./resources/images/cartografia.png" />Cupra PRG <span style="font-size:8px;">(1.05 mb)</span></a>
+					</li></ul>
+				</p>
+				<h3 style="margin-top:10px;margin-bottom:2px">Cartografia Tecnica Regionale Marche</h3> 
+				<span class="description" style="padding-left:1px;">Diversi set di layer estratto dalla Cartografia Tecnica Regionale</span>
+				<p> 
+					<ul><li>
+					<a href="javascript:addLayer('CTR_agraria','',null,'../../layer/geojson/p/data/gz/CTR_agraria.js');" >
+					<img src="./resources/images/layer.jpg" />Aree agrarie <span style="font-size:8px;">(266 kb)</span></a>
+					</li><li>
+					<a href="javascript:addLayer('CTR_verde','',null,'../../layer/geojson/p/data/gz/CTR_verde.js');" >
+					<img src="./resources/images/layer.jpg" />Aree verde <span style="font-size:8px;">(296 kb)</span></a>
+					</li><li> 
+					<a href="javascript:addLayer('CTR_infrastruttura','',null,'../../layer/geojson/p/data/gz/CTR_infrastruttura.js');" >
+					<img src="./resources/images/layer.jpg" />Infrastruttura <span style="font-size:8px;">(11 kb)</span></a>
+					</li><li> 
+					<a href="javascript:addLayer('CTR_idrico','',null,'../../layer/geojson/p/data/gz/CTR_idrico.js');" >
+					<img src="./resources/images/layer.jpg" />Idrografia <span style="font-size:8px;">(55 kb)</span></a>
+					</li><li> 
+					<a href="javascript:addLayer('CTR_tutto','',null,'../../layer/geojson/p/data/gz/CTR_tutto.js');" >
+					<img src="./resources/images/layer.jpg" />CTR_tutto <span style="font-size:8px;">(817 kb)</span></a>
+					</li></ul>
+				</p>
+				<h3 style="margin-top:10px;margin-bottom:2px">Esempi Open Data <img src="./resources/images/opendata1.png" style="height:22px;"></h3> 
+				<span class="description" style="padding-left:1px;">Layer realizzati con dati publici</span>
+				<p> 
+					<ul><li>
+					<a href="javascript:addLayer('piemonte_sit','zoomto',null,'../../layer/geojson/p/data/gz/piemonte_sit.js');" >
+					Siti archeologici e parchi - Regione Piemonte<span style="font-size:8px;">(45 kb)</span></a>
+					<span class="description"></span>
+					</li><li>
+					<a href="javascript:addLayer('settimo_torino_qgs','zoomto',null,'../../layer/geojson/p/data/gz/settimo_torino_qgs.js');" >Piste ciclabili - Settimo Torinese<span style="font-size:8px;">(45 kb)</span></a>
+					<span class="description"></span>
+					</li><li>
+					<a href="javascript:addLayer('firenze_scavi_archeolocici','zoomto',null,'../../layer/geojson/p/data/gz/firenze_scavi_archeolocici.js');" >Scavi archeologici - Firenze<span style="font-size:8px;">(5 Mb kb)</span></a>
+					<span class="description"></span>
+					</li><li>
+					<a href="javascript:addLayer('seismic_hazard','',null,'../../layer/geojson/p/data/gz/seismic_hazard.js');" >Seismic Hazard<span style="font-size:8px;">(4 Mb)</span></a>
+					<span class="description"></span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?geoRSS=w3cGeo&type=rss_2.0&feedUrl=http%3A%2F%2Ffeeds2.feedburner.com/italyQuakes&username=ixmaps','GeoRSS','xml','zoomto');" >ultimi 20 terremoti<span style="font-size:8px;"</span></a>
+					<span class="description"></span>
+
+
+
+					</li></ul>
+				</p>
+				<h3 style="margin-top:10px;margin-bottom:2px">Google My Maps - KML feeds <img src="./resources/icons/mapIcon.png" /> </h3> 
+				<span class="description" style="padding-left:1px;">Importazione di punti georeferenziati creato con Goole MyMaps, e usufruibile attraverso il formato export KML attraverso Yahoo Pipes&trade; da 'proxi server'</span>
+				<p> 
+					<ul><li>
+					<a href="javascript:addFeedLayer('http://pipes.yahoo.com/pipes/pipe.run?_id=e5a705c0753739f7beaa4bf15287d4a4&_render=json','Google_Maps_My_Map_KML','json');" >
+					Google My Maps - Hotel a San Benedetto del Tronto<span style="font-size:8px;"></span></a><br>
+					<span class="description">Google My Maps -> KML -> Yahoo Pipes&trade; -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://pipes.yahoo.com/pipes/pipe.run?_id=5ed48981b02d670ec69b3ae815ec6aff&_render=json','Google_Maps_My_Map_KML','json');" >
+					Google My Maps - Residence San Benedetto del Tronto<span style="font-size:8px;"></span></a><br>
+					<span class="description">Google My Maps -> KML -> Yahoo Pipes&trade; -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://pipes.yahoo.com/pipes/pipe.run?_id=ec23fe883b23ad68f388eaa43a3b245e&_render=json','Google_Maps_My_Map_KML','json');" >
+					Google My Maps - B&B e Case di Vacanza a San Benedetto del Tronto<span style="font-size:8px;"></span></a><br>
+					<span class="description">Google My Maps -> KML -> Yahoo Pipes&trade; -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http://maps.google.it/maps/ms?hl=it&ie=UTF8&t=h&vpsrc=6&source=embed&authuser=0&msa=0&output=kml&msid=207452503752096248551.0004abb464be3c2ab949f','Google_Maps_My_Map_KML_YQL','json','');" >
+					Google My Maps - B&B e Case di Vacanza a San Benedetto del Tronto (colored marker)<span style="font-size:8px;"></span></a><br>
+					<span class="description">Google My Maps -> YQL&trade; -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http%3A%2F%2Fmaps.google.com%2Fmaps%2Fms%3Fauthuser%3D0%26vps%3D1%26ie%3DUTF8%26msa%3D0%26output%3Dkml%26msid%3D210462731494201432364.0004b7c7e1db9fb2751b8','Google_Maps_My_Map_KML_YQL','json','zoomto');" >
+					Cupramarittima carnevale<span style="font-size:8px;"></span></a><br>
+					<span class="description">da Google MyMaps -> YQL&trade; -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http://maps.google.it/maps/ms?ie=UTF8&t=h&oe=UTF8&authuser=0&msa=0&output=kml&msid=200071383312425832794.0000011237b231a3d2a72','Google_Maps_My_Map_KML_YQL','json','zoomto|gallery');" >
+					Matera Chiese rupestre<span style="font-size:8px;"></span></a><br>
+					<span class="description">da Google MyMaps -> YQL&trade; -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http://www.berlin.de/ba-lichtenberg/wirtschaft/mietraum/index.php/index/all.kml?q=','Google_Maps_My_Map_KML_YQL','json','zoomto');" >
+					Veranstaltungsraeume Berlin Lichtenberg<span style="font-size:8px;"></span></a><br>
+					<span class="description">da Google MyMaps -> YQL&trade; -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http://www.berlin.de/ba-lichtenberg/buergerservice/kitas/index.php/index/all.kml?q=','Google_Maps_My_Map_KML_YQL','json','zoomto');" >
+					Kindertagesstätten Berlin Lichtenberg<span style="font-size:8px;"></span></a><br>
+					<span class="description">da Google MyMaps -> YQL&trade; -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('https%3A%2F%2Fwww.google.com%2Ffusiontables%2Fexporttable%3Fquery%3Dselect%2Bcol7%2Bfrom%2B3291763%2B%26o%3Dkmllink%26g%3Dcol7','Google_Maps_My_Map_KML_YQL','json','zoomto','Appartamenti Soci ProLoco Cupra Marittima');" >
+					ProLoco Cupra Marittima - appartamenti<span style="font-size:8px;"></span></a><br>
+					<span class="description">da Google Fusion Tables -> YQL&trade; -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http%3A%2F%2Fmaps.google.com%2Fmaps%2Fms%3Fauthuser%3D0%26vps%3D2%26hl%3Dit%26ie%3DUTF8%26msa%3D0%26output%3Dkml%26msid%3D213070983898211203964.0004bdfb141674455f8ed','Google_Maps_My_Map_KML_YQL','json','zoomto','Cupra%20Marittima%20-%20Info');" >
+					ProLoco Cupra Marittima - Info Map<span style="font-size:8px;"></span></a><br>
+					<span class="description">da Google Fusion Tables -> YQL&trade; -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('https%3A%2F%2Fwww.google.com%2Ffusiontables%2Fexporttable%3Fquery%3Dselect%2Bcol5%2Bfrom%2B4680609%2B%26o%3Dkmllink%26g%3Dcol5','Google_Maps_My_Map_KML_YQL','json','zoomto','Genitori');" >
+					Genitori<span style="font-size:8px;"></span></a><br>
+					<span class="description">da Google Fusion Tables -> YQL&trade; -> map layer</span>
+					</li></ul>
+				</p>
+
+				<h3 style="margin-top:10px;margin-bottom:2px">Proprietary XML Feed</h3> 
+				<span class="description" style="padding-left:1px;">Diversi test dell'importazione di punti georeferenziati presente in diversi formati da geo feed (proprietary XML, KML, GeoRss, GeoJson) possibile con l'uso di Yahoo Pipes&trade; da 'proxi server'</span>
+				<p> 
+					<ul><li>
+					<a href="javascript:addFeedLayer('http://pipes.yahoo.com/pipes/pipe.run?_id=8b95d859b21f1436315e255160187086&_render=json','AliseoTopnet','json');" >
+					<img src="http://aliseo.topnet.it/images/topnet.jpg"/>Copertura<span style="font-size:8px;"></span></a><br>
+					<span class="description">Aliseo XML con posizioni WiFi -> Yahoo Pipes&trade; -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://www.decorourbano.org/ext/georss_dl.php?regione=piemonte','DecoroUrbano','xml','zoomto');" >
+					<img src="http://www.decorourbano.org/resize.php?w=60&h=60&f=/images/avatarGuest.png"/>Decoro urbano - Settimo Torinese<span style="font-size:8px;"></span></a><br>
+					<span class="description">Decoro Urbano Roma - GeoRSS - proprietario ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://www.decorourbano.org/ext/georss_dl.php?comune=torino','DecoroUrbano','xml','zoomto');" >
+					<img src="http://www.decorourbano.org/resize.php?w=60&h=60&f=/images/avatarGuest.png"/>Decoro urbano - Torino<span style="font-size:8px;"></span></a><br>
+					<span class="description">Decoro Urbano Roma - GeoRSS - proprietario ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://www.decorourbano.org/ext/georss_dl.php?comune=roma','DecoroUrbano','xml','zoomto');" >
+					<img src="http://www.decorourbano.org/resize.php?w=60&h=60&f=/images/avatarGuest.png"/>Decoro urbano - Roma<span style="font-size:8px;"></span></a><br>
+					<span class="description">Decoro Urbano Roma - GeoRSS - proprietario ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://www.decorourbano.org/ext/georss_dl.php?comune=napoli','DecoroUrbano','xml','zoomto');" >
+					<img src="http://www.decorourbano.org/resize.php?w=60&h=60&f=/images/avatarGuest.png"/>Decoro urbano - Napoli<span style="font-size:8px;"></span></a><br>
+					<span class="description">Decoro Urbano Roma - GeoRSS - proprietario ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://www.decorourbano.org/ext/georss_dl.php','DecoroUrbano','xml','zoomto');" >
+					<img src="http://www.decorourbano.org/resize.php?w=60&h=60&f=/images/avatarGuest.png"/>Decoro urbano - tutto (!lento)<span style="font-size:8px;"></span></a><br>
+					<span class="description">Decoro Urbano - GeoRSS - proprietario ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http://85.18.173.117/opendata/Agenzieturistiche.xml','DataRoot','json','zoomto');" >
+					<img src="http://www.opendata.provincia.roma.it/img/logo.png"/>Agenzie turistiche<span style="font-size:8px;"></span></a><br>
+					<span class="description">Provincia di roma - CKAN - proprietario ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http://85.18.173.117/mappe/AccessPoint.xml','DataRoot','json','zoomto');" >
+					<img src="http://www.opendata.provincia.roma.it/img/logo.png"/>WiFi access points<span style="font-size:8px;"></span></a><br>
+					<span class="description">Provincia di roma - CKAN - proprietario ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http://85.18.173.117/opendata/EventiRomaEPiu.xml','DataRoot','json','zoomto','Eventi RomaEPiu');" >
+					<img src="http://www.opendata.provincia.roma.it/img/logo.png"/>Eventi<span style="font-size:8px;"></span></a><br>
+					<span class="description">Provincia di roma - CKAN - proprietario ->  map layer</span>
+					</li></ul>
+				</p>
+
+				<h3 style="margin-top:10px;margin-bottom:2px">Eventi georeferenziati</h3> 
+				<span class="description" style="padding-left:1px;">Diversi test dell'importazione di punti georeferenziati presente in diversi formati da geo feed (proprietary XML, KML, GeoRss, GeoJson) possibile con l'uso di Yahoo Pipes&trade; da 'proxi server'</span>
+				<p> 
+					<ul><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://www.provincia.ap.it/novita/newsdett/ProvAPManFeed.asp','GeoRSS','xml','zoomto');" >
+					Piceno News<span style="font-size:8px;"></span></a><br>
+					<span class="description">Piceno News - le manifestazioni -> geonamed.org -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://www.comunesbt.it/RSS/Eventi0.xml','GeoRSS','xml','zoomto');" >
+					<img src="http://t1.gstatic.com/images?q=tbn:ANd9GcSGrlUaQ7hanYk_EbTnm8OT9sP_Wtp3ywe8R0YRMCNEXODIuT4R"/> SBT News<span style="font-size:8px;"></span></a><br>
+					<span class="description">San Benedetto del Tronto -> geonames.org -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://feeds.feedburner.com/EventiDelMeseInMarche?format=xml','GeoRSS','xml','zoomto');" >
+					<img src="./resources/images/FeedBurner_64x64.png" />Eventi nelle Marche<span style="font-size:8px;"></span></a><br>
+					<span class="description">Eventi e sagre -> geonames.org -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?geoRSS=w3cGeo&type=rss_2.0&feedUrl=http%3A%2F%2Fwww.eventiesagre.it%2Frss%2FOggi_RSS.xml&username=ixmaps','GeoRSS','xml','zoomto');" >
+					<img src="http://www.eventiesagre.it/template/originalBlu/images/top/eventi_e_sagre.gif"/>Oggi in Italia<span style="font-size:8px;"></span></a><br>
+					<span class="description">Eventi e sagre - geonames.org -> map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://bari.repubblica.it/agenda/rssproxy?idarticolo=kw_eventi_redazionali&baseurl=http%3a%2f%2fbari.repubblica.it%2fagenda%2fall%2f0%2f0%2f&publy=1','GeoRSS','xml','');" >
+					<img src="http://profile.ak.fbcdn.net/hprofile-ak-ash2/373468_150910701628633_2025721218_q.jpg" />agenda - bari.repubblica.it<span style="font-size:8px;"></span></a><br>
+					<span class="description">Eventi da bari.repubblica.it -> geonames.org ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://rss.feedsportal.com/c/32452/f/476941/index.rss','GeoRSS','xml','');" >
+					<img src="http://www.exibart.com/images/LogoExibartPiccolo.gif" />marche abbruzzi<span style="font-size:8px;"></span></a><br>
+					<span class="description">Eventi da exibart.it -> geonames.org  ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://rss.feedsportal.com/c/32452/f/476962/index.rss','GeoRSS','xml','');" >
+					<img src="http://www.exibart.com/images/LogoExibartPiccolo.gif" /> fiere<span style="font-size:8px;"></span></a><br>
+					<span class="description">Eventi da exibart.it -> geonames.org ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://rss.feedsportal.com/c/32452/f/476952/index.rss','GeoRSS','xml','');" >
+					<img src="http://www.exibart.com/images/LogoExibartPiccolo.gif" /> around<span style="font-size:8px;"></span></a><br>
+					<span class="description">Eventi da exibart.it -> geonames.org ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://rss.feedsportal.com/c/32452/f/476953/index.rss','GeoRSS','xml','');" >
+					<img src="http://www.exibart.com/images/LogoExibartPiccolo.gif" /> architekt<span style="font-size:8px;"></span></a><br>
+					<span class="description">Eventi da exibart.it -> geonames.org ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://rss.feedsportal.com/c/32452/f/476970/index.rss','GeoRSS','xml','');" >
+					<img src="http://www.exibart.com/images/LogoExibartPiccolo.gif" /> progetti ed iniziative<span style="font-size:8px;"></span></a><br>
+					<span class="description">Eventi da exibart.it -> geonames.org ->  map layer</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://www.berlin.de/ba-charlottenburg-wilmersdorf/org/umwelt/umwelt/altglascontainer/index.php/index/all.gjson?q=','GeoJson','json','');" >
+					<img src="http://www.exibart.com/images/LogoExibartPiccolo.gif" /> progetti ed iniziative<span style="font-size:8px;"></span></a><br>
+					<span class="description">Eventi da exibart.it -> geonames.org ->  map layer</span>
+					</li></ul>
+				</p>
+
+				<h3 style="margin-top:10px;margin-bottom:2px">Development tests</h3> 
+				<span class="description" style="padding-left:1px;">Diversi test solo per dev purpose</span>
+				<p> 
+					<ul><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?geoRSS=w3cGeo&username=ixmaps&type=rss_2.0&feedUrl=http://www.pagineeventi.it/writable/feed/ultimieventi.xml','GeoRSS','xml','zoomto');" >www.pagineeventi.it - incomplete georefs - geonames<span style="font-size:8px;"></span></a><br>
+					<span class="description">test incomplete georefs - geonames.org</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http://espresso.repubblica.it/food/agenda/rssproxy?idarticolo=kw_eventi_redazionali&publy=1&nolink=false','GeoRSS','xml','zoomto');" >espresso.repubblica.it - oggi<span style="font-size:8px;"></span></a><br>
+					<span class="description">test many items</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http://espresso.repubblica.it/food/agenda/rssproxy?idarticolo=kw_eventi_redazionali&publy=1&dateFrom=2012-02-01&dateTo=2012-02-29&nolink=false','GeoRSS','xml','zoomto');" >espresso.repubblica.it - febbraio - all<span style="font-size:8px;"></span></a><br>
+					<span class="description">test many items</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http://espresso.repubblica.it/food/agenda/rssproxy?idarticolo=kw_eventi_redazionali&publy=1&all=true&nolink=false','GeoRSS','xml','zoomto');" >espresso.repubblica.it - many items - all<span style="font-size:8px;"></span></a><br>
+					<span class="description">test many items</span>
+					</li><li>
+					<a href="javascript:addFeedLayer_YQL('http://feeds.feedburner.com/CinemaMargherita?format=xml','GeoRSS','xml','zoomto');" >Cinema Margherita<span style="font-size:8px;"></span></a><br>
+					<span class="description">test georef via feedburner</span>
+					</li><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://www.movieplayer.it/rss/multiplex-palariviera-cinema-san-benedetto-del-tronto_2620.xml','GeoRSS','xml','zoomto');" >Cinema SBT<span style="font-size:8px;"></span></a><br>
+					<span class="description">test via - geonames.org</span>
+					</li></ul>
+				</p>
+				<h3 style="margin-top:10px;margin-bottom:2px">Tutti feed di eventi</h3> 
+				<p> 
+					<ul><li>
+					<a href="javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://www.provincia.ap.it/novita/newsdett/ProvAPManFeed.asp','GeoRSS','xml','zoomto');javascript:addFeedLayer('http://www.comunesbt.it/RSS/Eventi_Quartiere0.xml','GeoRSS','xml','zoomto');javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://feeds.feedburner.com/EventiDelMeseInMarche?format=xml','GeoRSS','xml','zoomto');javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http%3A%2F%2Fwww.eventiesagre.it%2Frss%2FOggi_RSS.xml','GeoRSS','xml','zoomto');javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://bari.repubblica.it/agenda/rssproxy?idarticolo=kw_eventi_redazionali&baseurl=http%3a%2f%2fbari.repubblica.it%2fagenda%2fall%2f0%2f0%2f&publy=1&dateFrom=2012-01-01&dateTo=2012-01-31&nolink=true&provinces=BA','GeoRSS','xml','');javascript:addFeedLayer('http://api.geonames.org/rssToGeoRSS?username=ixmaps&geoRSS=w3cGeo&type=rss_2.0&feedUrl=http://rss.feedsportal.com/c/32452/f/476941/index.rss','GeoRSS','xml','');" >tutti feed<span style="font-size:8px;"></span></a><br>
+					<span class="description">Eventi da vari fonti - test multi feed</span>
+					</li></ul>
+				</p>
+			</div>
+	</div> 
+  
+</body>	
+</html>
