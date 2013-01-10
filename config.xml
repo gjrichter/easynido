@@ -37,7 +37,7 @@
     <icon src="res/icon/windows-phone/icon-173.png" gap:platform="winphone"   gap:role="background" />
 		-->
 
-    <gap:splash src="resources/images/easy_nido/nido2_long.png" />
+    <gap:splash src="splash.png" />
 		<!--
     <gap:splash src="res/screen/android/screen-ldpi-portrait.png"  gap:platform="android" gap:density="ldpi" />
     <gap:splash src="res/screen/android/screen-mdpi-portrait.png"  gap:platform="android" gap:density="mdpi" />
