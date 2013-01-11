@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <widget xmlns     = "http://www.w3.org/ns/widgets"
         xmlns:gap = "http://phonegap.com/ns/1.0"
-        id        = "com.phonegap.hello-world"
-        version   = "2.0.0">
+        id        = "SBT.EasyNido.beta"
+        version   = "0.9.0">
     <name>Easy Nido</name>
 
     <description>
-        Hello World sample application that responds to the deviceready event.
+        Easy Nido - info and carpooling SBT - beta
     </description>
 
     <author href="http://ixmaps.com" email="guenter.richter@ixmaps.com">
@@ -37,7 +37,7 @@
     <icon src="res/icon/windows-phone/icon-173.png" gap:platform="winphone"   gap:role="background" />
 		-->
 
-    <gap:splash src="splash.png" width="64" height="35" />
+    <gap:splash src="splash.png" />
 		<!--
     <gap:splash src="res/screen/android/screen-ldpi-portrait.png"  gap:platform="android" gap:density="ldpi" />
     <gap:splash src="res/screen/android/screen-mdpi-portrait.png"  gap:platform="android" gap:density="mdpi" />
